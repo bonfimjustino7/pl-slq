@@ -1,0 +1,4 @@
+CREATE TRIGGER foo_count_trigger 
+	AFTER INSERT OR DELETE on foo
+	FOR EACH STATEMENT
+	EXECUTE FUNCTION my_count_trigger();
