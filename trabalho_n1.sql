@@ -49,6 +49,28 @@ end;
 $$ language plpgsql;
 
 
+CREATE OR REPLACE FUNCTION lucro_obtido(date Date) returns void as $$
+
+declare
+    product products%ROWTYPE;
+    orders_v orders%ROWTYPE;
+    cursor refcursor;
+
+begin
+    open cursor for SELECT orders.ordernumber, products.buyprice, products.msrp FROM orders JOIN orderdetails ON orderdetails.ordernumber = orders.ordernumber JOIN products ON orderdetails.productcode = products.productcode WHERE UPPER(orders.status) = 'SHIPPED' and orders.shippeddate BETWEEN date and NOW();    
+    <<looplucro>>
+	loop    
+        fetch cursor into orders_v.ordernumber, product.buyprice, product.msrp;
+        
+        IF NOT FOUND THEN
+            EXIT;
+        END IF;
+        raise notice 'Venda % obteve o lucro de %', orders_v.ordernumber, (product.buyprice - product.msrp);
+    end loop looplucro;
+end;
+
+$$ language plpgsql;
+
 CREATE TRIGGER trigger_estoque 
 	BEFORE INSERT on orderdetails
 	FOR EACH ROW
