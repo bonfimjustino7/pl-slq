@@ -49,24 +49,29 @@ end;
 $$ language plpgsql;
 
 
-CREATE OR REPLACE FUNCTION lucro_obtido(date Date) returns void as $$
+CREATE OR REPLACE FUNCTION lucro_obtido(date Date) returns decimal as $$
 
 declare
     product products%ROWTYPE;
     orders_v orders%ROWTYPE;
+    quantidade integer;
     cursor refcursor;
+    lucro decimal := 0.0;
 
 begin
-    open cursor for SELECT orders.ordernumber, products.buyprice, products.msrp FROM orders JOIN orderdetails ON orderdetails.ordernumber = orders.ordernumber JOIN products ON orderdetails.productcode = products.productcode WHERE UPPER(orders.status) = 'SHIPPED' and orders.shippeddate BETWEEN date and NOW();    
+    open cursor for SELECT orderdetails.quantityordered , orders.ordernumber, products.buyprice, products.msrp FROM orders JOIN orderdetails ON orderdetails.ordernumber = orders.ordernumber JOIN products ON orderdetails.productcode = products.productcode WHERE UPPER(orders.status) = 'SHIPPED' and orders.shippeddate BETWEEN date and NOW();    
     <<looplucro>>
 	loop    
-        fetch cursor into orders_v.ordernumber, product.buyprice, product.msrp;
+        fetch cursor into quantidade, orders_v.ordernumber, product.buyprice, product.msrp;
         
         IF NOT FOUND THEN
             EXIT;
         END IF;
-        raise notice 'Venda % obteve o lucro de %', orders_v.ordernumber, (product.buyprice - product.msrp);
+        
+        lucro := lucro + (product.msrp - product.buyprice) * quantidade;
     end loop looplucro;
+    raise notice 'Lucro obtido desde %, foi: %', date, lucro;
+    return lucro;
 end;
 
 $$ language plpgsql;
